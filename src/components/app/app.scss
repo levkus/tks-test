@@ -1,0 +1,15 @@
+.point {
+  fill: transparent;
+  r: 3px;
+
+  &:hover {
+    fill: #74A3C7;
+    stroke: white;
+  }
+}
+
+.line {
+  stroke: #74A3C7;
+  stroke-width: 1.3;
+  fill: none;
+}
