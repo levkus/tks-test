@@ -5,17 +5,22 @@ class Chart extends Component {
   constructor (props) {
     super(props)
 
-    this.renderPopup = this.renderPopup.bind(this)
-    this.removePopup = this.removePopup.bind(this)
-
     this.state = {
       points: [],
       yMin: NaN,
       yMax: NaN,
       deltaX: NaN,
       deltaY: NaN,
-      polylineCoordinates: ''
+      polylineCoordinates: '',
+      showPopup: false,
+      popup: { x: 0, y: 0, value: 0, prevValue: 0 },
+      projection: { x: 0, y: 0 },
+      circle: { x: 0, y: 0 }
     }
+
+    this.setPopup = this.setPopup.bind(this)
+    this.showPopup = this.showPopup.bind(this)
+    this.hidePopup = this.hidePopup.bind(this)
   }
 
   componentWillMount () {
@@ -32,35 +37,36 @@ class Chart extends Component {
 
   parseData (data, width, height, padding) {
     // Считаем расстояние между точками по горизонтали
-    const deltaX = ((width - padding * 2) / (data.length - 1)).toFixed(2)
+    const deltaX = (width - padding * 2 - 15) / (data.length - 1)
 
     // Заполняем массив 'points' объектами с горизонтальными координатами точек и их значениями
-    // Заодно записываем все значения в формате polyline в отдельный массив 'values'
+    // Заодно записываем все значения в отдельный массив 'values'
     const points = []
     const values = []
     let count = 0
+    let prevValue = 0
     _.map(data, item => {
       const point = {
-        x: parseInt((count * deltaX).toFixed(2)) + padding,
-        value: item.value
+        x: parseInt(count * deltaX) + padding + 15,
+        value: item.value,
+        prevValue
       }
       values.push(item.value)
       points.push(point)
+      prevValue = item.value
       count++
     })
 
-    // Находим минимальное и максимальное значение из массива 'values'
-    let yMin = Math.floor(Math.min.apply(null, values))
-    let yMax = Math.ceil(Math.max.apply(null, values))
-    yMin = Math.round(yMin / 10) * 10
-    yMax = Math.round(yMax / 10) * 10
+    // Находим минимальное и максимальное значение из массива 'values' и округляем до 10
+    const yMin = Math.floor(Math.min.apply(null, values) / 10) * 10
+    const yMax = Math.ceil(Math.max.apply(null, values) / 10) * 10
 
     // Находим частное высоты графика и разницы максимального и минимального значений
-    const deltaY = ((height - padding * 2) / (yMax - yMin)).toFixed(2)
+    const deltaY = (height - padding * 2) / (yMax - yMin)
 
     // Добавляем объектам в массиве вертикальные координаты
     _.map(points, point => {
-      point.y = padding + parseInt(((yMax - point.value) * deltaY).toFixed(2))
+      point.y = padding + ((yMax - point.value) * deltaY)
     })
 
     // Собираем координаты точек в одну строку
@@ -73,98 +79,73 @@ class Chart extends Component {
     this.setState({ deltaX, deltaY, points, yMin, yMax, polylineCoordinates })
   }
 
-  renderData () {
-    const { height, lineClass } = this.props
+  // Создаем невидимые области для обработки событий мыши
+  renderTriggers () {
+    const triggers = _.map(this.state.points, point => (
+      <rect x={point.x - (this.state.deltaX / 2)} y='0'
+        key={_.uniqueId('toggle_')}
+        width={this.state.deltaX}
+        height={this.props.height}
+        style={{ 'cursor': 'pointer' }}
+        fill='transparent'
+        onMouseEnter={this.setPopup(point.x, point.y, point.value, point.prevValue)}
+      />
+    ))
+    return <g>{triggers}</g>
+  }
 
-    return (
-      <g>
-        <polyline fill='none' points={this.state.polylineCoordinates} className={lineClass} />
-        {_.map(this.state.points, point => {
-          const id = _.uniqueId()
-          return (
-            <rect x={point.x - (this.state.deltaX / 2)} y='0'
-              key={id}
-              style={{ 'cursor': 'pointer' }}
-              width={this.state.deltaX}
-              height={height}
-              fill='transparent'
-              onMouseOver={this.renderPopup(point.x, point.y, point.value, id)}
-              onMouseLeave={this.removePopup(id)}
-            />
-          )
-        }
-        )}
+  showPopup () {
+    !this.state.showPopup ? this.setState({ showPopup: true }) : false
+  }
+
+  hidePopup () {
+    this.state.showPopup ? this.setState({ showPopup: false }) : false
+  }
+
+  setPopup (x, y, value, prevValue) {
+    return event => {
+      const popupX = x + 122 < this.props.width ? x + 2 : x - 122
+      const popupY = y - 58 > 10 ? y - 58 : y + 8
+      this.setState({
+        popup: { x: popupX, y: popupY, fill: '#fff', value, prevValue },
+        projection: { x, y, stroke: '#D5D8D9' },
+        circle: { x, y, fill: '#74A3C7', stroke: '#F6F7F8' }
+      })
+    }
+  }
+
+  renderGrid () {
+    const { width, height, padding, axisTextClass } = this.props
+    const gridY = (height - padding * 2) / 4
+    const deltaVal = this.state.yMax - this.state.yMin
+    let pos = padding
+    let val = this.state.yMax
+    return _.times(5, item => {
+      const line = <g key={_.uniqueId('gridY_')}>
+        <line
+          stroke='#E5E7E9'
+          x1={padding + 15}
+          x2={width - padding}
+          y1={pos}
+          y2={pos}
+          strokeWidth='0.8'
+        />
+        <text className={axisTextClass} x={padding + 5} y={pos} textAnchor='end'>{val}</text>
       </g>
-    )
-  }
-
-  renderPopup (x, y, value, id) {
-    return event => {
-      // Создаем popup
-      const popup = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      popup.setAttribute('id', 'popup_' + id)
-      popup.setAttribute('x', x + 122 < this.props.width ? x + 2 : x - 122)
-      popup.setAttribute('y', y - 58 > 10 ? y - 58 : y + 8)
-      popup.setAttribute('width', 120)
-      popup.setAttribute('height', 50)
-      popup.setAttribute('fill', '#fff')
-      popup.setAttribute('rx', 5)
-      popup.setAttribute('ry', 5)
-      popup.setAttribute('pointer-events', 'none')
-      popup.setAttribute('filter', 'url(#shadow)')
-
-      // Создаем точку
-      const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      point.setAttribute('id', 'point_' + id)
-      point.setAttribute('cx', x)
-      point.setAttribute('cy', y)
-      point.setAttribute('r', 4)
-      point.setAttribute('stroke-width', 2)
-      point.setAttribute('fill', '#74A3C7')
-      point.setAttribute('stroke', '#F6F7F8')
-      point.setAttribute('pointer-events', 'none')
-
-      // Создаем проекцию
-      const projection = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-      projection.setAttribute('id', 'projection_' + id)
-      projection.setAttribute('x1', x)
-      projection.setAttribute('x2', x)
-      projection.setAttribute('y1', this.props.height - this.props.padding)
-      projection.setAttribute('y2', y)
-      projection.setAttribute('stroke', '#D5D8D9')
-      projection.setAttribute('stroke-dasharray', '5,5')
-      projection.setAttribute('pointer-events', 'none')
-
-      // Создаем текст
-      const textValue = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-      textValue.setAttribute('x', x + 122 < this.props.width ? x + 12 : x - 112)
-      textValue.setAttribute('y', y - 58 > 10 ? y - 36 : y + 28)
-      textValue.setAttribute('id', 'value_' + id)
-      const valueNode = document.createTextNode(value)
-      textValue.appendChild(valueNode)
-
-      // Добавляем созданные элементы на график
-      this.refs.chart.appendChild(popup)
-      this.refs.chart.appendChild(point)
-      this.refs.chart.appendChild(projection)
-      this.refs.chart.appendChild(textValue)
-    }
-  }
-
-  removePopup (id) {
-    return event => {
-      this.refs.chart.removeChild(document.getElementById('popup_' + id))
-      this.refs.chart.removeChild(document.getElementById('point_' + id))
-      this.refs.chart.removeChild(document.getElementById('projection_' + id))
-      this.refs.chart.removeChild(document.getElementById('value_' + id))
-    }
+      pos += gridY
+      val = val - deltaVal / 4
+      return line
+    })
   }
 
   render () {
-    const { width, height, background, padding } = this.props
+    const { width, height, background, padding, lineClass, popupClass, projectionClass,
+    pointClass, popupTextClass, popupIncreaseClass, popupDecreaseClass } = this.props
+    const { popup, projection, circle, polylineCoordinates } = this.state
     return (
-      <div>
-        <svg width={width} height={height + 20} ref='chart'>
+      <div onMouseEnter={this.showPopup} onMouseLeave={this.hidePopup}>
+        <svg width={width} height={height} ref='chart'>
+
           <filter id='shadow' height='130%'>
             <feGaussianBlur in='SourceAlpha' stdDeviation='1' /> // stdDeviation is how much to blur
             <feOffset dx='0' dy='1.5' result='offsetblur' /> // how much to offset
@@ -176,12 +157,39 @@ class Chart extends Component {
               <feMergeNode in='SourceGraphic' /> // this contains the element that the filter is applied to
             </feMerge>
           </filter>
+
           <rect width={width} height={height} fill={background} />
-          {this.renderData()}
-          <line x1={padding} x2={width - padding} y1={height - padding} y2={height - padding} stroke='#E5E7E9' />
-          <line x1={padding} x2={width - padding} y1={padding} y2={padding} stroke='#E5E7E9' />
-          <text x={0} y={padding}>{this.state.yMax}</text>
-          <text x={0} y={height - padding}>{this.state.yMin}</text>
+
+          {this.renderGrid()}
+
+          <polyline fill='none' points={polylineCoordinates} className={lineClass} pointerEvents='none' />
+
+          <g style={{ opacity: this.state.showPopup ? '1' : '0', transition: 'opacity .5s' }}>
+            <g transform={`translate(${popup.x},${popup.y})`}>
+              <rect width={120} height={50}
+                className={popupClass}
+                x={0} y={0}
+                filter='url(#shadow)'
+              />
+              <text className={popupTextClass} x={10} y={26}>
+                {popup.value.toString().replace('.', ',')}
+              </text>
+              <text
+                className={popup.value - popup.prevValue > 0 ? popupIncreaseClass : popupDecreaseClass}
+                x={60}
+                y={26}>
+                {popup.prevValue.toString().replace('.', ',')}
+              </text>
+            </g>
+            <line x1={projection.x} x2={projection.x}
+              y1={height - padding}
+              y2={projection.y}
+              className={projectionClass}
+            />
+            <circle cx={circle.x} cy={circle.y} className={pointClass} />
+          </g>
+
+          {this.renderTriggers()}
         </svg>
       </div>
     )
@@ -193,7 +201,13 @@ Chart.propTypes = {
   height: PropTypes.number,
   padding: PropTypes.number,
   lineClass: PropTypes.string,
+  axisTextClass: PropTypes.string,
   pointClass: PropTypes.string,
+  popupClass: PropTypes.string,
+  projectionClass: PropTypes.string,
+  popupTextClass: PropTypes.string,
+  popupIncreaseClass: PropTypes.string,
+  popupDecreaseClass: PropTypes.string,
   background: PropTypes.string,
   data: PropTypes.array
 }

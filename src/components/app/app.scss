@@ -1,15 +1,50 @@
-.point {
-  fill: transparent;
-  r: 3px;
-
-  &:hover {
-    fill: #74A3C7;
-    stroke: white;
-  }
-}
-
 .line {
   stroke: #74A3C7;
   stroke-width: 1.3;
   fill: none;
+}
+
+.axisText {
+  font-size: 12px;
+  font-weight: lighter;
+  fill: #9CA2AA;
+}
+
+.point {
+  fill: #74A3C7;
+  r: 4px;
+  stroke-width: 2;
+  stroke: #F6F7F8;
+  transition: .1s;
+}
+
+.popup {
+  fill: #fff;
+  rx: 5;
+  ry: 5;
+  transition: .1s;
+}
+
+.projection {
+  stroke: #D5D8D9;
+  stroke-dasharray: 5,5;
+  transition: .1s;
+}
+
+.popupText {
+  font-size: 14px;
+  font-weight: lighter;
+  transition: 1s;
+}
+
+.popupIncrease {
+  composes: popupText;
+  fill: #22A053;
+  transition: 1s;
+}
+
+.popupDecrease {
+  composes: popupText;
+  fill: #9f2121;
+  transition: 1s;
 }
