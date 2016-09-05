@@ -110,6 +110,7 @@ export default class Chart extends Component {
     }
   }
 
+  // Устанавливаем значения для вплывающей подсказки
   setTooltip (x, y, date, value, prevValue) {
     return event => {
       const tooltipX = x + 132 + this.state.offsetX < this.props.width ? x + 2 : x - 132 - this.state.offsetX
