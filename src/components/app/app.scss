@@ -15,36 +15,39 @@
   r: 4px;
   stroke-width: 2;
   stroke: #F6F7F8;
-  transition: .1s;
+
 }
 
-.popup {
+.tooltip {
   fill: #fff;
   rx: 5;
   ry: 5;
-  transition: .1s;
 }
 
 .projection {
   stroke: #D5D8D9;
   stroke-dasharray: 5,5;
-  transition: .1s;
 }
 
-.popupText {
-  font-size: 14px;
+.date {
+  font-size: 12px;
+  fill: #9299A1;
   font-weight: lighter;
-  transition: 1s;
 }
 
-.popupIncrease {
-  composes: popupText;
+.tooltipText {
+  font-size: 13px;
+  font-weight: lighter;
+}
+
+.tooltipIncrease {
+  composes: tooltipText;
   fill: #22A053;
-  transition: 1s;
+  points: '0,8 5,0 10,8';
 }
 
-.popupDecrease {
-  composes: popupText;
-  fill: #9f2121;
-  transition: 1s;
+.tooltipDecrease {
+  composes: tooltipText;
+  fill: #cd3d3d;
+  points: '0,8 5,0 10,8';
 }

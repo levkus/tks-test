@@ -1,26 +1,27 @@
 import React, { Component, PropTypes } from 'react'
 import _ from 'lodash'
 
-class Chart extends Component {
+import Tooltip from './tooltip.js'
+
+export default class Chart extends Component {
   constructor (props) {
     super(props)
 
     this.state = {
       points: [],
-      yMin: NaN,
-      yMax: NaN,
-      deltaX: NaN,
-      deltaY: NaN,
+      yMin: 0,
+      yMax: 0,
+      deltaX: 0,
+      deltaY: 0,
       polylineCoordinates: '',
-      showPopup: false,
-      popup: { x: 0, y: 0, value: 0, prevValue: 0 },
-      projection: { x: 0, y: 0 },
-      circle: { x: 0, y: 0 }
+      dates: [],
+      showTooltip: false,
+      tooltip: { x: 0, y: 0, date: 0, value: 0, prevValue: 0, positive: true },
+      point: { x: 0, y: 0 }
     }
 
-    this.setPopup = this.setPopup.bind(this)
-    this.showPopup = this.showPopup.bind(this)
-    this.hidePopup = this.hidePopup.bind(this)
+    this.setTooltip = this.setTooltip.bind(this)
+    this.toggleTooltip = this.toggleTooltip.bind(this)
   }
 
   componentWillMount () {
@@ -35,160 +36,199 @@ class Chart extends Component {
     }
   }
 
-  parseData (data, width, height, padding) {
-    // Считаем расстояние между точками по горизонтали
-    const deltaX = (width - padding * 2 - 15) / (data.length - 1)
+  shouldComponentUpdate (nextProps, nextState) {
+    if (nextState.tooltip !== this.state.tooltip || nextState.point !== this.state.point) {
+      return false
+    } else {
+      return true
+    }
+  }
 
-    // Заполняем массив 'points' объектами с горизонтальными координатами точек и их значениями
-    // Заодно записываем все значения в отдельный массив 'values'
+  parseData (data, width, height, padding) {
     const points = []
     const values = []
-    let count = 0
-    let prevValue = 0
+    const dates = []
+    let prevValue = NaN
     _.map(data, item => {
       const point = {
-        x: parseInt(count * deltaX) + padding + 15,
         value: item.value,
+        date: item.date,
         prevValue
       }
+      dates.push(item.date)
       values.push(item.value)
       points.push(point)
       prevValue = item.value
-      count++
     })
 
-    // Находим минимальное и максимальное значение из массива 'values' и округляем до 10
-    const yMin = Math.floor(Math.min.apply(null, values) / 10) * 10
-    const yMax = Math.ceil(Math.max.apply(null, values) / 10) * 10
+    // Находим минимальное и максимальное значение из массива 'values' и округляем
+    let yMin = Math.min.apply(null, values)
+    let yMax = Math.max.apply(null, values)
+    const yPrecision = -1 * ((yMax - yMin).toFixed(0).length - 1)
+    yMin = _.floor(yMin, yPrecision)
+    yMax = _.ceil(yMax, yPrecision)
+
+    // Считаем отступ слева для больших чисел
+    const offsetX = -1 * yPrecision * 8
+
+    // Считаем расстояние между точками по горизонтали
+    const deltaX = (width - padding * 2 - offsetX) / (data.length - 1)
 
     // Находим частное высоты графика и разницы максимального и минимального значений
     const deltaY = (height - padding * 2) / (yMax - yMin)
 
-    // Добавляем объектам в массиве вертикальные координаты
-    _.map(points, point => {
-      point.y = padding + ((yMax - point.value) * deltaY)
-    })
-
-    // Собираем координаты точек в одну строку
+    // Добавляем объектам в массиве координаты, а так же записываем их в отдельную
+    // строку для <polyline />
+    let step = 0
     let polylineCoordinates = ''
     _.map(points, point => {
+      point.y = padding + ((yMax - point.value) * deltaY)
+      point.x = parseInt(step * deltaX) + padding + offsetX
       polylineCoordinates += `${point.x},${point.y} `
+      step++
     })
 
     // Записываем собранные данные в state
-    this.setState({ deltaX, deltaY, points, yMin, yMax, polylineCoordinates })
+    this.setState({ deltaX, deltaY, points, yMin, yMax, offsetX, polylineCoordinates, dates })
   }
 
   // Создаем невидимые области для обработки событий мыши
   renderTriggers () {
     const triggers = _.map(this.state.points, point => (
       <rect x={point.x - (this.state.deltaX / 2)} y='0'
-        key={_.uniqueId('toggle_')}
+        key={_.uniqueId('trigger_')}
         width={this.state.deltaX}
         height={this.props.height}
         style={{ 'cursor': 'pointer' }}
         fill='transparent'
-        onMouseEnter={this.setPopup(point.x, point.y, point.value, point.prevValue)}
+        onMouseEnter={this.setTooltip(point.x, point.y, point.date, point.value, point.prevValue)}
       />
     ))
     return <g>{triggers}</g>
   }
 
-  showPopup () {
-    !this.state.showPopup ? this.setState({ showPopup: true }) : false
+  toggleTooltip (e) {
+    switch (e.type) {
+      case 'mouseenter':
+        !this.state.showTooltip ? this.setState({ showTooltip: true }) : false
+        break
+      case 'mouseleave':
+        this.state.showTooltip ? this.setState({ showTooltip: false }) : false
+        break
+    }
   }
 
-  hidePopup () {
-    this.state.showPopup ? this.setState({ showPopup: false }) : false
-  }
-
-  setPopup (x, y, value, prevValue) {
+  setTooltip (x, y, date, value, prevValue) {
     return event => {
-      const popupX = x + 122 < this.props.width ? x + 2 : x - 122
-      const popupY = y - 58 > 10 ? y - 58 : y + 8
+      const tooltipX = x + 132 + this.state.offsetX < this.props.width ? x + 2 : x - 132 - this.state.offsetX
+      const tooltipY = y - 58 > 10 ? y - 58 : y + 8
+      const positive = parseFloat(value) >= parseFloat(prevValue)
       this.setState({
-        popup: { x: popupX, y: popupY, fill: '#fff', value, prevValue },
-        projection: { x, y, stroke: '#D5D8D9' },
-        circle: { x, y, fill: '#74A3C7', stroke: '#F6F7F8' }
+        tooltip: { x: tooltipX, y: tooltipY, date, value, prevValue, positive },
+        point: { x, y }
       })
     }
   }
 
-  renderGrid () {
+  renderY () {
     const { width, height, padding, axisTextClass } = this.props
+    const { yMin, yMax, offsetX } = this.state
     const gridY = (height - padding * 2) / 4
-    const deltaVal = this.state.yMax - this.state.yMin
+    const deltaVal = yMax - yMin
     let pos = padding
     let val = this.state.yMax
     return _.times(5, item => {
       const line = <g key={_.uniqueId('gridY_')}>
         <line
           stroke='#E5E7E9'
-          x1={padding + 15}
+          x1={padding + offsetX}
           x2={width - padding}
           y1={pos}
           y2={pos}
           strokeWidth='0.8'
         />
-        <text className={axisTextClass} x={padding + 5} y={pos} textAnchor='end'>{val}</text>
+        <text className={axisTextClass} x={padding + offsetX - 8} y={pos} textAnchor='end'>{val}</text>
       </g>
       pos += gridY
       val = val - deltaVal / 4
+      // console.log(line)
       return line
     })
   }
 
+  renderX () {
+    const { padding, height, axisTextClass } = this.props
+
+    let countedMonths = []
+    let prevMonth = ''
+    // let countedYears = []
+    // let prevYear = ''
+    _.map(this.state.dates, date => {
+      const newMonth = date.toLocaleString('ru', { month: 'long' })
+      if (newMonth !== prevMonth) {
+        countedMonths = _.concat(countedMonths, { month: newMonth, count: 1 })
+      } else {
+        _.last(countedMonths).count++
+      }
+
+      // const newYear = date.toLocaleString('ru', { year: 'numeric' })
+      // if (newYear !== prevYear) {
+      //   countedYears = _.concat(countedYears, { year: newYear, count: 1 })
+      // } else {
+      //   _.last(countedYears).count++
+      // }
+
+      prevMonth = newMonth
+      // prevYear = newYear
+    })
+
+    let monthX = padding + this.state.offsetX
+    const months = _.map(countedMonths, month => {
+      const monthText =
+        <text key={_.uniqueId('month_')} className={axisTextClass} x={monthX} y={height}>{month.month}</text>
+      monthX += month.count * this.state.deltaX
+      return monthText
+    })
+
+    // let yearX = padding + this.state.offsetX
+    // const years = _.map(countedYears, year => {
+    //   const yearText =
+    //     <text key={_.uniqueId('year_')} className={axisTextClass} x={yearX} y={height + 20}>{year.year}</text>
+    //   yearX += year.count * this.state.deltaX
+    //   return yearText
+    // })
+    // console.log(months)
+
+    return <g>
+      {months}
+    </g>
+  }
+
   render () {
-    const { width, height, background, padding, lineClass, popupClass, projectionClass,
-    pointClass, popupTextClass, popupIncreaseClass, popupDecreaseClass } = this.props
-    const { popup, projection, circle, polylineCoordinates } = this.state
+    const { width, height, background, padding, lineClass, tooltipClass, projectionClass,
+    pointClass, tooltipDateClass, tooltipTextClass, tooltipIncreaseClass, tooltipDecreaseClass } = this.props
+    const { tooltip, point, offsetX, polylineCoordinates } = this.state
     return (
-      <div onMouseEnter={this.showPopup} onMouseLeave={this.hidePopup}>
-        <svg width={width} height={height} ref='chart'>
-
-          <filter id='shadow' height='130%'>
-            <feGaussianBlur in='SourceAlpha' stdDeviation='1' /> // stdDeviation is how much to blur
-            <feOffset dx='0' dy='1.5' result='offsetblur' /> // how much to offset
-            <feComponentTransfer>
-              <feFuncA type='linear' slope='0.15' />
-            </feComponentTransfer>
-            <feMerge>
-              <feMergeNode /> // this contains the offset blurred image
-              <feMergeNode in='SourceGraphic' /> // this contains the element that the filter is applied to
-            </feMerge>
-          </filter>
-
-          <rect width={width} height={height} fill={background} />
-
-          {this.renderGrid()}
-
+      <div onMouseEnter={this.toggleTooltip} onMouseLeave={this.toggleTooltip}>
+        <svg width={width} height={height + padding}>
+          <rect width={width} height={height + padding} fill={background} />
+          {this.renderY()}
+          {this.renderX()}
           <polyline fill='none' points={polylineCoordinates} className={lineClass} pointerEvents='none' />
-
-          <g style={{ opacity: this.state.showPopup ? '1' : '0', transition: 'opacity .5s' }}>
-            <g transform={`translate(${popup.x},${popup.y})`}>
-              <rect width={120} height={50}
-                className={popupClass}
-                x={0} y={0}
-                filter='url(#shadow)'
-              />
-              <text className={popupTextClass} x={10} y={26}>
-                {popup.value.toString().replace('.', ',')}
-              </text>
-              <text
-                className={popup.value - popup.prevValue > 0 ? popupIncreaseClass : popupDecreaseClass}
-                x={60}
-                y={26}>
-                {popup.prevValue.toString().replace('.', ',')}
-              </text>
-            </g>
-            <line x1={projection.x} x2={projection.x}
-              y1={height - padding}
-              y2={projection.y}
-              className={projectionClass}
-            />
-            <circle cx={circle.x} cy={circle.y} className={pointClass} />
-          </g>
-
+          <Tooltip
+            bottom={height - padding}
+            showTooltip={this.state.showTooltip}
+            tooltip={tooltip}
+            offsetX={offsetX}
+            point={point}
+            tooltipClass={tooltipClass}
+            tooltipDateClass={tooltipDateClass}
+            tooltipTextClass={tooltipTextClass}
+            tooltipIncreaseClass={tooltipIncreaseClass}
+            tooltipDecreaseClass={tooltipDecreaseClass}
+            projectionClass={projectionClass}
+            pointClass={pointClass}
+          />
           {this.renderTriggers()}
         </svg>
       </div>
@@ -203,13 +243,12 @@ Chart.propTypes = {
   lineClass: PropTypes.string,
   axisTextClass: PropTypes.string,
   pointClass: PropTypes.string,
-  popupClass: PropTypes.string,
+  tooltipClass: PropTypes.string,
   projectionClass: PropTypes.string,
-  popupTextClass: PropTypes.string,
-  popupIncreaseClass: PropTypes.string,
-  popupDecreaseClass: PropTypes.string,
+  tooltipDateClass: PropTypes.string,
+  tooltipTextClass: PropTypes.string,
+  tooltipIncreaseClass: PropTypes.string,
+  tooltipDecreaseClass: PropTypes.string,
   background: PropTypes.string,
   data: PropTypes.array
 }
-
-export default Chart

@@ -18,13 +18,23 @@ class App extends Component {
     this.makeData()()
   }
 
-  makeData (min = 0, max = 80, times = 60) {
+  makeData (min = 0, max = 80, times = 72) {
     return event => {
+      // min = parseInt(Math.random() * (300 - 25) + 25)
+      // max = parseInt(Math.random() * (200000 - 400) + 400)
+      const startDate = new Date(2015, 7, 21)
+      const endDate = new Date(2016, 7, 21)
+      const deltaDate = (endDate - startDate) / (times - 1)
       const newData = []
-      let date = new Date()
       let count = 0
+      let date = startDate
       _.times(times, () => {
-        newData.push({ id: count, date: date, value: (Math.random() * (max - min) + min).toFixed(2) })
+        newData.push({
+          id: count,
+          date,
+          value: (Math.random() * (max - min) + min).toFixed(2)
+        })
+        date = new Date(Date.parse(date) + deltaDate)
         count++
       })
       this.setState({ data: newData })
@@ -36,17 +46,18 @@ class App extends Component {
       <div>
         <Chart
           data={this.state.data}
-          width={window.innerWidth}
+          width={864}
           height={280}
           padding={20}
           lineClass={styles.line}
           axisTextClass={styles.axisText}
           pointClass={styles.point}
-          popupClass={styles.popup}
+          tooltipClass={styles.tooltip}
           projectionClass={styles.projection}
-          popupTextClass={styles.popupText}
-          popupIncreaseClass={styles.popupIncrease}
-          popupDecreaseClass={styles.popupDecrease}
+          tooltipDateClass={styles.date}
+          tooltipTextClass={styles.tooltipText}
+          tooltipIncreaseClass={styles.tooltipIncrease}
+          tooltipDecreaseClass={styles.tooltipDecrease}
           background='#F6F7F8'
         />
         <button onClick={this.makeData()}>New Data</button>
