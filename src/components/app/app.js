@@ -20,10 +20,10 @@ class App extends Component {
 
   makeData (min = 0, max = 80, times = 72) {
     return event => {
-      // min = parseInt(Math.random() * (300 - 25) + 25)
-      // max = parseInt(Math.random() * (200000 - 400) + 400)
-      const startDate = new Date(2015, 7, 21)
-      const endDate = new Date(2016, 7, 21)
+      min = parseInt(Math.random() * (300 - 25) + 25)
+      max = parseInt(Math.random() * (1000 - 400) + 400)
+      const startDate = new Date(2015, 7, 1)
+      const endDate = new Date(2016, 7, 31)
       const deltaDate = (endDate - startDate) / (times - 1)
       const newData = []
       let count = 0
