@@ -36,14 +36,6 @@ export default class Chart extends Component {
     }
   }
 
-  shouldComponentUpdate (nextProps, nextState) {
-    if (nextState.tooltip !== this.state.tooltip || nextState.point !== this.state.point) {
-      return false
-    } else {
-      return true
-    }
-  }
-
   parseData (data, width, height, padding) {
     const points = []
     const values = []
@@ -123,6 +115,7 @@ export default class Chart extends Component {
       const tooltipX = x + 132 + this.state.offsetX < this.props.width ? x + 2 : x - 132 - this.state.offsetX
       const tooltipY = y - 58 > 10 ? y - 58 : y + 8
       const positive = parseFloat(value) >= parseFloat(prevValue)
+
       this.setState({
         tooltip: { x: tooltipX, y: tooltipY, date, value, prevValue, positive },
         point: { x, y }
@@ -151,7 +144,6 @@ export default class Chart extends Component {
       </g>
       pos += gridY
       val = val - deltaVal / 4
-      // console.log(line)
       return line
     })
   }
@@ -161,8 +153,8 @@ export default class Chart extends Component {
 
     let countedMonths = []
     let prevMonth = ''
-    // let countedYears = []
-    // let prevYear = ''
+    let countedYears = []
+    let prevYear = ''
     _.map(this.state.dates, date => {
       const newMonth = date.toLocaleString('ru', { month: 'long' })
       if (newMonth !== prevMonth) {
@@ -171,15 +163,15 @@ export default class Chart extends Component {
         _.last(countedMonths).count++
       }
 
-      // const newYear = date.toLocaleString('ru', { year: 'numeric' })
-      // if (newYear !== prevYear) {
-      //   countedYears = _.concat(countedYears, { year: newYear, count: 1 })
-      // } else {
-      //   _.last(countedYears).count++
-      // }
+      const newYear = date.toLocaleString('ru', { year: 'numeric' })
+      if (newYear !== prevYear) {
+        countedYears = _.concat(countedYears, { year: newYear, count: 1 })
+      } else {
+        _.last(countedYears).count++
+      }
 
       prevMonth = newMonth
-      // prevYear = newYear
+      prevYear = newYear
     })
 
     let monthX = padding + this.state.offsetX
@@ -190,17 +182,17 @@ export default class Chart extends Component {
       return monthText
     })
 
-    // let yearX = padding + this.state.offsetX
-    // const years = _.map(countedYears, year => {
-    //   const yearText =
-    //     <text key={_.uniqueId('year_')} className={axisTextClass} x={yearX} y={height + 20}>{year.year}</text>
-    //   yearX += year.count * this.state.deltaX
-    //   return yearText
-    // })
-    // console.log(months)
+    let yearX = padding + this.state.offsetX
+    const years = _.map(countedYears, year => {
+      const yearText =
+        <text key={_.uniqueId('year_')} className={axisTextClass} x={yearX} y={height + 20}>{year.year}</text>
+      yearX += year.count * this.state.deltaX
+      return yearText
+    })
 
     return <g>
       {months}
+      {years}
     </g>
   }
 
@@ -210,8 +202,8 @@ export default class Chart extends Component {
     const { tooltip, point, offsetX, polylineCoordinates } = this.state
     return (
       <div onMouseEnter={this.toggleTooltip} onMouseLeave={this.toggleTooltip}>
-        <svg width={width} height={height + padding}>
-          <rect width={width} height={height + padding} fill={background} />
+        <svg width={width} height={height + padding + 10}>
+          <rect width={width} height={height + padding + 10} fill={background} />
           {this.renderY()}
           {this.renderX()}
           <polyline fill='none' points={polylineCoordinates} className={lineClass} pointerEvents='none' />
