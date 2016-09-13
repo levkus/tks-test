@@ -22,9 +22,6 @@ export default class Chart extends Component {
       tooltip: { x: 0, y: 0, date: 0, value: 0, prevValue: 0, positive: true },
       point: { x: 0, y: 0 }
     }
-
-    this.setTooltip = this.setTooltip.bind(this)
-    this.toggleTooltip = this.toggleTooltip.bind(this)
   }
 
   componentWillMount () {
@@ -77,29 +74,14 @@ export default class Chart extends Component {
     let step = 0
     let polylineCoordinates = ''
     _.map(points, point => {
-      point.y = (padding + ((yMax - point.value) * deltaY)).toPrecision(4)
-      point.x = parseInt(step * deltaX) + padding + offsetX
+      point.y = _.round((padding + ((yMax - point.value) * deltaY)), 2)
+      point.x = step * deltaX + padding + offsetX
       polylineCoordinates += `${point.x},${point.y} `
       step++
     })
 
     // Записываем собранные данные в state
     this.setState({ deltaX, deltaY, points, yMin, yMax, offsetX, polylineCoordinates, dates })
-  }
-
-  // Создаем невидимые области для обработки событий мыши
-  renderTriggers = () => {
-    const triggers = _.map(this.state.points, point => (
-      <rect x={point.x - (this.state.deltaX / 2)} y='0'
-        key={_.uniqueId('trigger_')}
-        width={this.state.deltaX}
-        height={this.props.height}
-        style={{ 'cursor': 'pointer' }}
-        fill='transparent'
-        onMouseEnter={this.setTooltip(point.x, point.y, point.date, point.value, point.prevValue)}
-      />
-    ))
-    return <g>{triggers}</g>
   }
 
   toggleTooltip = event => {
@@ -116,8 +98,9 @@ export default class Chart extends Component {
   // Устанавливаем значения для вплывающей подсказки
   setTooltip = (x, y, date, value, prevValue) => event => {
     const tooltipX = x + 132 + this.state.offsetX < this.props.width ? x + 2 : x - 132 - this.state.offsetX
-    const tooltipY = y - 58 > 10 ? y - 58 : y + 8
-    const positive = parseFloat(value) >= parseFloat(prevValue)
+    const tooltipY = y - 58 >= 10 ? y - 58 : y + 8
+    console.log(typeof y, typeof tooltipY)
+    const positive = value >= prevValue
 
     this.setState({
       tooltip: { x: tooltipX, y: tooltipY, date, value, prevValue, positive },
@@ -129,35 +112,38 @@ export default class Chart extends Component {
     const { width, height, background, padding } = this.props
     const { tooltip, point, offsetX, polylineCoordinates, yMin, yMax, dates, deltaX } = this.state
     return (
-      <div onMouseEnter={this.toggleTooltip} onMouseLeave={this.toggleTooltip}>
-        <svg width={width} height={height + padding + 10}>
-          <rect width={width} height={height + padding + 10} fill={background} />
-          <Grid
-            width={width}
-            height={height}
-            padding={padding}
-            yMin={yMin}
-            yMax={yMax}
-            offsetX={offsetX}
-            dates={dates}
-            deltaX={deltaX}
-          />
-          <Graph points={polylineCoordinates} />
-          <Tooltip
-            tooltip={tooltip}
-            point={point}
-            showTooltip={this.state.showTooltip}
-            offsetX={offsetX}
-            bottom={height - padding}
-          />
-          <Triggers
-            points={this.state.points}
-            deltaX={deltaX}
-            height={height}
-            setTooltip={this.setTooltip}
-          />
-        </svg>
-      </div>
+      <svg
+        width={width}
+        height={height + padding + 10}
+        onMouseEnter={this.toggleTooltip}
+        onMouseLeave={this.toggleTooltip}
+      >
+        <rect width={width} height={height + padding + 10} fill={background} />
+        <Grid
+          width={width}
+          height={height}
+          padding={padding}
+          yMin={yMin}
+          yMax={yMax}
+          offsetX={offsetX}
+          dates={dates}
+          deltaX={deltaX}
+        />
+        <Graph points={polylineCoordinates} />
+        <Tooltip
+          tooltip={tooltip}
+          point={point}
+          showTooltip={this.state.showTooltip}
+          offsetX={offsetX}
+          bottom={height - padding}
+        />
+        <Triggers
+          points={this.state.points}
+          deltaX={deltaX}
+          height={height + padding + 10}
+          setTooltip={this.setTooltip}
+        />
+      </svg>
     )
   }
 }

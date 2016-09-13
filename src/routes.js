@@ -3,7 +3,7 @@ import React from 'react'
 import { Route, IndexRoute } from 'react-router'
 
 import CoreLayout from 'layouts/core_layout'
-import App from 'components/app/app'
+import App from 'containers/app_container'
 
 export default (
   <Route path='/' component={CoreLayout}>

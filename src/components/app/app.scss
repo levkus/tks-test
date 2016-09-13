@@ -1,1 +1,52 @@
+.container {
+  margin: 0 auto;
+  padding: 1rem;
+  max-width: 800px;
+}
 
+.settings {
+
+}
+
+.settingsSection {
+  margin-bottom: .5rem;
+}
+
+.label {
+  font-size: .8rem;
+  width: 170px;
+  display: inline-block;
+}
+
+.input {
+  font-size: .8rem;
+  width: 100px;
+  text-align: center;
+  border: none;
+  border-bottom: 1px solid #ddd;
+
+  &:focus {
+    outline: none;
+    border-bottom: 1px solid #74A3C7;
+    color: #74A3C7;
+  }
+}
+
+.button {
+  font-size: .8rem;
+  border: none;
+  background: #74A3C7;
+  color: #fff;
+  padding: .5rem;
+  margin: 1rem 0;
+  display: block;
+  cursor: pointer;
+
+  &:hover {
+    background: #85b2d4;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}

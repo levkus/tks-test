@@ -4,6 +4,13 @@ import styles from './tooltip.scss'
 class Tooltip extends PureComponent {
   render () {
     const { bottom, showTooltip, tooltip, offsetX, point } = this.props
+    const tooltipStyle = {
+      WebkitTransform: `translate(${tooltip.x}px, ${tooltip.y}px)`,
+      MozTransform: `translate(${tooltip.x}px, ${tooltip.y}px)`,
+      MsTransform: `translate(${tooltip.x}px, ${tooltip.y}px)`,
+      transform: `translate(${tooltip.x}px, ${tooltip.y}px)`,
+      transition: 'transform .1s'
+    }
     return (
       <svg style={{ opacity: showTooltip ? '1' : '0', transition: 'opacity .5s' }}>
         <filter id='shadow' height='130%'>
@@ -17,7 +24,7 @@ class Tooltip extends PureComponent {
             <feMergeNode in='SourceGraphic' /> // this contains the element that the filter is applied to
           </feMerge>
         </filter>
-        <g transform={`translate(${tooltip.x},${tooltip.y})`}>
+        <g style={tooltipStyle}>
           <rect width={130 + offsetX} height={50}
             className={styles.tooltip}
             x={0} y={0}
