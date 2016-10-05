@@ -1,13 +1,14 @@
 export const MAKE_NEW_CHART = 'MAKE_NEW_CHART'
 import _ from 'lodash'
+import moment from 'moment'
 
 export const makeNewChart = (min, max, times, start, end) => {
-  const startDate = new Date(Date.parse(start))
-  const endDate = new Date(Date.parse(end))
+  const startDate = moment(start, 'DD.MM.YYYY')
+  const endDate = moment(end, 'DD.MM.YYYY')
   const deltaDate = (endDate - startDate) / (times - 1)
   const newData = []
   let count = 0
-  let date = startDate
+  let date = new Date(startDate._d)
   _.times(times, () => {
     newData.push({
       id: count,

@@ -75,7 +75,7 @@ export default class Chart extends Component {
     let polylineCoordinates = ''
     _.map(points, point => {
       point.y = _.round((padding + ((yMax - point.value) * deltaY)), 2)
-      point.x = step * deltaX + padding + offsetX
+      point.x = _.round(step * deltaX + padding + offsetX, 2)
       polylineCoordinates += `${point.x},${point.y} `
       step++
     })
@@ -99,7 +99,6 @@ export default class Chart extends Component {
   setTooltip = (x, y, date, value, prevValue) => event => {
     const tooltipX = x + 132 + this.state.offsetX < this.props.width ? x + 2 : x - 132 - this.state.offsetX
     const tooltipY = y - 58 >= 10 ? y - 58 : y + 8
-    console.log(typeof y, typeof tooltipY)
     const positive = value >= prevValue
 
     this.setState({

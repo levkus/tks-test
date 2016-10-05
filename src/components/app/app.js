@@ -1,4 +1,5 @@
 import React, { Component, PropTypes } from 'react'
+import _ from 'lodash'
 import Chart from '../../containers/chart_container'
 import styles from './app.scss'
 
@@ -10,10 +11,11 @@ class App extends Component {
       min: 0,
       max: 80,
       times: 72,
-      start: '7/20/2013',
-      end: '9/10/2016'
+      start: '01.09.2015',
+      end: '20.08.2016'
     }
   }
+
   componentWillMount () {
     const { min, max, times, start, end } = this.state
     this.props.makeNewChart(min, max, times, start, end)
@@ -21,6 +23,7 @@ class App extends Component {
 
   makeNewChart = () => event => {
     const { min, max, times, start, end } = this.state
+    event.preventDefault()
     this.props.makeNewChart(min, max, times, start, end)
   }
 
@@ -28,32 +31,56 @@ class App extends Component {
     this.setState({ [key]: event.target.value })
   }
 
+  onInputFocus = event => {
+    event.target.select()
+  }
+
+  renderInputs = () => {
+    const fields = [
+      {
+        key: 'min',
+        name: 'Минимальное значение'
+      },
+      {
+        key: 'max',
+        name: 'Максимальное значение'
+      },
+      {
+        key: 'times',
+        name: 'Количество значений'
+      },
+      {
+        key: 'start',
+        name: 'Начальная дата'
+      },
+      {
+        key: 'end',
+        name: 'Конечная дата'
+      }
+    ]
+
+    return _.map(fields, field => {
+      return (
+        <div className={styles.settingsSection} key={field.key}>
+          <label className={styles.label} htmlFor={field.key}>{`${field.name}:`}</label>
+          <input className={styles.input} id={field.key} value={this.state[field.key]}
+            onChange={this.onInputChange(field.key)}
+            onFocus={this.onInputFocus}
+          />
+        </div>
+      )
+    })
+  }
+
   render () {
     return (
       <div className={styles.container}>
-        <div className={styles.settings}>
-          <div className={styles.settingsSection}>
-            <label className={styles.label} htmlFor='min'>Минимальное значение:</label>
-            <input className={styles.input} id='min' value={this.state.min} onChange={this.onInputChange('min')} />
+        <form onSubmit={this.makeNewChart}>
+          <div className={styles.settings}>
+            {this.renderInputs()}
           </div>
-          <div className={styles.settingsSection}>
-            <label className={styles.label} htmlFor='max'>Максимальное значение:</label>
-            <input className={styles.input} id='max' value={this.state.max} onChange={this.onInputChange('max')} />
-          </div>
-          <div className={styles.settingsSection}>
-            <label className={styles.label} htmlFor='times'>Количество значений:</label>
-            <input className={styles.input} id='times' value={this.state.times} onChange={this.onInputChange('times')} />
-          </div>
-          <div className={styles.settingsSection}>
-            <label className={styles.label} htmlFor='start'>Начальная дата:</label>
-            <input className={styles.input} id='start' value={this.state.start} onChange={this.onInputChange('start')} />
-          </div>
-          <div className={styles.settingsSection}>
-            <label className={styles.label} htmlFor='end'>Конечная дата:</label>
-            <input className={styles.input} id='end' value={this.state.end} onChange={this.onInputChange('end')} />
-          </div>
-        </div>
-        <button className={styles.button} onClick={this.makeNewChart()}>Построить новый график</button>
+          <button className={styles.button} onClick={this.makeNewChart()}>Построить новый график</button>
+        </form>
         <Chart
           data={this.props.data}
           width={800}

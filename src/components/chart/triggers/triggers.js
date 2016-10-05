@@ -18,4 +18,11 @@ class Triggers extends PureComponent {
   }
 }
 
+Triggers.propTypes = {
+  points: PropTypes.array,
+  deltaX: PropTypes.number,
+  height: PropTypes.number,
+  setTooltip: PropTypes.func
+}
+
 export default Triggers
